@@ -31,15 +31,8 @@
       padding:16px 18px; border-bottom:1px solid var(--border);
       background:linear-gradient(180deg, rgba(198,40,40,.06), transparent);
     }
-    .icon{
-      font-size:28px; line-height:1; filter: drop-shadow(0 1px 0 rgba(0,0,0,.15));
-    }
-    h1{
-      margin:0; font-size:20px; letter-spacing:.2px;
-    }
-    .meta{
-      font-size:.93rem; color:var(--muted); margin-top:2px;
-    }
+    .icon{ font-size:28px; line-height:1; filter: drop-shadow(0 1px 0 rgba(0,0,0,.15)); }
+    h1{ margin:0; font-size:20px; letter-spacing:.2px; }
     .wrap{ padding:18px; }
     .status{
       padding:12px 14px; border-left:8px solid var(--warn);
@@ -48,18 +41,18 @@
     .status.ok{ border-left-color:var(--ok); }
     .status.warn{ border-left-color:var(--warn); }
     .btn{
-      margin-top:12px; display:inline-block; font-size:1rem; font-weight:600;
-      padding:.7rem 1.1rem; border-radius:12px; border:1px solid var(--brand);
-      background:#fff; color:var(--brand); cursor:pointer;
-      transition:all .15s ease;
+      margin-top:12px; display:inline-block; font-size:1rem; font-weight:700;
+      padding:.7rem 1.1rem; border-radius:12px; border:2px solid var(--warn);
+      background:#fff; color:var(--warn); cursor:pointer; transition:all .15s ease;
     }
-    .btn:hover{ background:var(--brand); color:#fff; }
+    .btn.danger{ background:#fff; color:var(--warn); border-color:var(--warn); }
+    .btn.success{ background:var(--ok); color:#fff; border-color:var(--ok); }
+    .btn:active{ transform:translateY(1px); }
     .task{ margin-top:18px; border:1px dashed var(--border); border-radius:12px; padding:14px; }
-    .task h2{ margin:0 0 8px 0; font-size:1.05rem; color:var(--brand); }
+    .task h2{ margin:0 0 8px 0; font-size:1.05rem; color:var(--brand); text-decoration:underline; }
     details{ margin-top:16px; }
     summary{ cursor:pointer; font-weight:600; }
     .muted{ color:var(--muted); }
-    .imgwrap img{ max-width:100%; height:auto; border:1px solid var(--border); border-radius:12px; }
   </style>
 </head>
 <body>
@@ -68,20 +61,19 @@
       <div class="icon">🚒</div>
       <div>
         <h1>Funkübung – Station: Am Stück 22 (Rommerz)</h1>
-        <div class="meta">Zielkoordinate: 50.450764, 9.614117 · Radius: 60 m</div>
       </div>
     </div>
     <div class="wrap">
-      <div id="status" class="status warn">
+      <div id="status" class="status warn" role="status" aria-live="polite">
         <strong>Status:</strong> Noch kein Standort geprüft. Bitte auf <em>Standort prüfen</em> tippen und GPS-Freigabe erlauben.
       </div>
 
-      <button id="btn" class="btn">Standort prüfen</button>
+      <button id="btn" class="btn danger" aria-pressed="false">Standort prüfen</button>
 
       <div id="content" style="display:none">
         <div class="task">
           <h2>Hinweis &amp; Aufgabe</h2>
-          <p><strong>Hinweis-Buchstabe:</strong> <span id="hint">—</span> <span class="muted">(wird durch die Einsatzleitung je Fahrzeug festgelegt)</span></p>
+          <p><strong>Hinweis-Buchstabe:</strong> <span id="hint">—</span> <span class="muted">(wird durch die Übungsleitung je Fahrzeug festgelegt)</span></p>
           <p><strong>Aufgabe:</strong> Wiederholt eine durchgesagte Zahl/UTM-Koordinate exakt und fehlerfrei.</p>
         </div>
       </div>
@@ -98,12 +90,10 @@
   </div>
 
 <script>
-// === Geofence-Konfiguration ===
 const TARGET_LAT = 50.450764;
 const TARGET_LNG = 9.614117;
 const RADIUS_M   = 60;
 
-// === Haversine korrekt ===
 function haversine(lat1, lon1, lat2, lon2){
   const toRad = d => d * Math.PI / 180;
   const R = 6371000;
@@ -121,11 +111,12 @@ const content = document.getElementById("content");
 function setStatusOk(text){
   statusBox.classList.remove("warn"); statusBox.classList.add("ok");
   statusBox.innerHTML = `<strong>Status:</strong> ${text}`;
+  btn.classList.remove("danger"); btn.classList.add("success");
 }
-
 function setStatusWarn(text){
   statusBox.classList.remove("ok"); statusBox.classList.add("warn");
   statusBox.innerHTML = `<strong>Status:</strong> ${text}`;
+  btn.classList.remove("success"); btn.classList.add("danger");
 }
 
 btn.addEventListener("click", () => {
@@ -135,13 +126,13 @@ btn.addEventListener("click", () => {
   }
   setStatusWarn("Bitte Standortfreigabe erlauben …");
   navigator.geolocation.getCurrentPosition(pos => {
-    const { latitude, longitude, accuracy } = pos.coords;
+    const {{ latitude, longitude, accuracy }} = pos.coords;
     const dist = haversine(latitude, longitude, TARGET_LAT, TARGET_LNG);
     if(dist <= RADIUS_M){
-      setStatusOk(`Am richtigen Ort (≈ ${Math.round(dist)} m, Genauigkeit ±${Math.round(accuracy)} m).`);
+      setStatusOk(`Am richtigen Ort (≈ ${{Math.round(dist)}} m, Genauigkeit ±${{Math.round(accuracy)}} m).`);
       content.style.display = "block";
     }else{
-      setStatusWarn(`Nicht am richtigen Ort (Entfernung ≈ ${Math.round(dist)} m, Zielradius ${RADIUS_M} m).`);
+      setStatusWarn(`Nicht am richtigen Ort (Entfernung ≈ ${{Math.round(dist)}} m, Zielradius ${{RADIUS_M}} m).`);
       content.style.display = "none";
     }
   }, err => {
@@ -150,7 +141,7 @@ btn.addEventListener("click", () => {
     }else{
       setStatusWarn("Standort konnte nicht ermittelt werden. Versucht es erneut (Daten/GPS aktivieren).");
     }
-  }, { enableHighAccuracy:true, timeout:12000, maximumAge:0 });
+  }, {{ enableHighAccuracy:true, timeout:12000, maximumAge:0 }});
 });
 </script>
 </body>
