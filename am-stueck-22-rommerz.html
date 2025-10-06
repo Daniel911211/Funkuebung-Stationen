@@ -20,7 +20,7 @@
   <div class="card">
     <h1>Funkübung – Station: Am Stück 22 (Rommerz)</h1>
     <div class="small meta">
-      Zielkoordinate: 50.4506113, 9.6142646 · Radius: 100 m 
+      Zielkoordinate: 50.450764, 9.614117 · Radius: 100 m
     </div>
     <p class="small">
       Diese Seite prüft per GPS, ob ihr am richtigen Standort seid. Wenn ja, werden Hinweis & Aufgabe angezeigt.
@@ -37,7 +37,6 @@
       <h2>Hinweis & Aufgabe</h2>
       <p><strong>Hinweis-Buchstabe:</strong> <span id="hint">—</span> <span class="small">(wird durch die Einsatzleitung je Fahrzeug festgelegt)</span></p>
       <p><strong>Aufgabe:</strong> Wiederholt eine durchgesagte Zahl/UTM-Koordinate exakt und fehlerfrei.</p>
-      
     </div>
 
     <hr>
@@ -45,16 +44,16 @@
       <summary>Info & Konfiguration</summary>
       <p class="small">
         <strong>Station:</strong> Am Stück 22 (Rommerz)<br>
-        <strong>Koordinaten (WGS84):</strong> 50.450761, 9.614064<br>
-        <strong>Radius:</strong> 60 m
+        <strong>Koordinaten (WGS84):</strong> 50.450764, 9.614117<br>
+        <strong>Radius:</strong> 100 m
       </p>
     </details>
   </div>
 
 <script>
-const TARGET_LAT =  50.4506113;
-const TARGET_LNG = 9.6142646;
-const RADIUS_M   = 60;
+const TARGET_LAT = 50.450764;
+const TARGET_LNG = 9.614117;
+const RADIUS_M   = 100;
 
 function haversine(lat1, lon1, lat2, lon2){
   const toRad = d => d * Math.PI / 180;
@@ -93,7 +92,7 @@ btn.addEventListener("click", () => {
       setStatusOk(`Am richtigen Ort (≈ ${Math.round(dist)} m, Genauigkeit ±${Math.round(accuracy)} m).`);
       content.style.display = "block";
     }else{
-      setStatusWarn(`Nicht am richtigen Ort (Entfernung ≈ ${Math.round(dist)} m, Zielradius 60 m).`);
+      setStatusWarn(`Nicht am richtigen Ort (Entfernung ≈ ${Math.round(dist)} m, Zielradius ${RADIUS_M} m).`);
       content.style.display = "none";
     }
   }, err => {
