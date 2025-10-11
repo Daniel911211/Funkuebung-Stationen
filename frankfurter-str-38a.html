@@ -66,4 +66,126 @@
     </div>
   </div>
 </body>
+  <script>
+// === Geofence / Zielkoordinate ===
+const TARGET_LAT = 50.450764;
+const TARGET_LNG = 9.614117;
+const RADIUS_M   = 60;
+
+// === Elemente ===
+const statusBox = document.getElementById("status");
+const btn       = document.getElementById("btn");
+const content   = document.getElementById("content");
+
+// (Optional – falls du später ein Abfragewort-Gate nutzen willst)
+const wordGate  = document.getElementById("wordGate");
+const wordInput = document.getElementById("wordInput");
+const wordBtn   = document.getElementById("wordBtn");
+const wordMsg   = document.getElementById("wordMsg");
+const outBox    = document.getElementById("out");
+const outCall   = document.getElementById("outCall");
+const outQ      = document.getElementById("outQuestion");
+const outLetter = document.getElementById("outLetter");
+const outCode   = document.getElementById("outCode");
+const hintSpan  = document.getElementById("hint");
+
+// Abfragewörter (nur nötig, wenn du das Gate nutzt)
+const WORD_PAYLOAD = {
+  "ANTON":     { call:"FHZ 2", question:"Welche Pumpe ist im TSF verbaut?",                                  letter:"I", code:"W1P8" },
+  "BERTA":     { call:"FHZ 3", question:"Wie viele Einsatzkräfte kann euer Fahrzeug maximal aufnehmen?",    letter:"U", code:"W2P7" },
+  "CAESAR":    { call:"FHZ 4", question:"Welche Materialien/Ausrüstungen transportiert ihr mit dem GW-L?",  letter:"A", code:"W3P6" },
+  "DORA":      { call:"FHZ 5", question:"Wie viele Saugschläuche führt euer Fahrzeug mit?",                 letter:"A", code:"W4P5" },
+  "EMIL":      { call:"FHZ 6", question:"Welche technischen Geräte nutzt ihr zur Menschenrettung bei VU?",  letter:"E", code:"W5P4" },
+  "FRIEDRICH": { call:"FHZ 1", question:"Welche Aufgaben hat der Einsatzleitwagen an der Einsatzstelle?",   letter:"E", code:"W6P3" }
+};
+
+// Eingabe normalisieren (Umlaute, Großschreibung, Leerzeichen)
+function norm(s){
+  return (s || "")
+    .toUpperCase()
+    .replace(/\s+/g,"")
+    .replace(/Ä/g,"AE").replace(/Ö/g,"OE").replace(/Ü/g,"UE").replace(/ß/g,"SS");
+}
+
+// Haversine
+function haversine(lat1, lon1, lat2, lon2){
+  const toRad = d => d * Math.PI / 180, R = 6371000;
+  const dLat = toRad(lat2-lat1), dLon = toRad(lon2-lon1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// UI-Helfer
+function setStatusOk(text){
+  statusBox.classList.remove("warn");
+  statusBox.classList.add("ok");
+  statusBox.innerHTML = `<strong>Status:</strong> ${text}`;
+  btn.classList.add("success");
+}
+function setStatusWarn(text){
+  statusBox.classList.remove("ok");
+  statusBox.classList.add("warn");
+  statusBox.innerHTML = `<strong>Status:</strong> ${text}`;
+  btn.classList.remove("success");
+}
+function resetGate(){
+  if (!wordGate) return;
+  if (hintSpan)  hintSpan.textContent = "—";
+  wordInput.value = "";
+  wordMsg.textContent = "";
+  wordGate.style.display = "none";
+  if (outBox) outBox.style.display = "none";
+}
+
+// Button: Standort prüfen
+btn.addEventListener("click", () => {
+  if(!navigator.geolocation){
+    setStatusWarn("Geolocation wird nicht unterstützt.");
+    return;
+  }
+  resetGate();
+  setStatusWarn("Bitte Standortfreigabe erlauben …");
+
+  navigator.geolocation.getCurrentPosition(pos => {
+    const { latitude, longitude, accuracy } = pos.coords;
+    const dist = haversine(latitude, longitude, TARGET_LAT, TARGET_LNG);
+    if (dist <= RADIUS_M){
+      setStatusOk(`Am richtigen Ort (≈ ${Math.round(dist)} m, Genauigkeit ±${Math.round(accuracy)} m).`);
+      content.style.display = "block";
+      if (wordGate) wordGate.style.display = "block"; // Abfragewortfeld zeigen (falls genutzt)
+    } else {
+      setStatusWarn(`Nicht am richtigen Ort (Entfernung ≈ ${Math.round(dist)} m, Zielradius ${RADIUS_M} m).`);
+      content.style.display = "none";
+    }
+  }, err => {
+    setStatusWarn("Standort konnte nicht ermittelt werden oder Zugriff verweigert.");
+  }, { enableHighAccuracy:true, timeout:15000, maximumAge:0 });
+});
+
+// (Optional) Abfragewort-Logik – nur aktiv, wenn wordBtn existiert
+if (wordBtn){
+  let tries = 0;
+  wordBtn.addEventListener("click", () => {
+    const payload = WORD_PAYLOAD[norm(wordInput.value)];
+    if (payload){
+      wordMsg.textContent = "Freigeschaltet ✅";
+      outCall.textContent   = payload.call;
+      outQ.textContent      = payload.question;
+      outLetter.textContent = payload.letter;
+      outCode.textContent   = payload.code;
+      if (hintSpan) hintSpan.innerHTML = `<strong style="color:#c62828;">${payload.letter}</strong>`;
+      if (outBox) outBox.style.display = "block";
+    } else {
+      tries++;
+      wordMsg.textContent = `Falsches Wort ❌ (Versuch ${tries}).`;
+      if (tries >= 3){
+        wordMsg.textContent += " Warte 15 Sekunden …";
+        wordBtn.disabled = true;
+        setTimeout(()=>{ wordBtn.disabled=false; wordMsg.textContent=""; tries=0; }, 15000);
+      }
+    }
+  });
+}
+</script>
+
 </html>
