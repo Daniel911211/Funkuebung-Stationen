@@ -52,15 +52,15 @@
       <div id="content" style="display:none">
         <div class="task">
           <h2>Hinweis &amp; Aufgabe</h2>
+          <p><strong>Aufgabe:</strong> Meldet euch per Funk bei der Übungsleitung.</p>
           <p><strong>Hinweis-Buchstabe:</strong> <span id="hint">—</span> <span class="muted">(wird nach Code-Freischaltung angezeigt)</span></p>
-          <p><strong>Aufgabe:</strong> Wiederholt eine durchgesagte Zahl/UTM-Koordinate exakt und fehlerfrei.</p>
         </div>
 
         <div id="codeGate" class="gate" style="display:none">
           <h3 style="margin:0 0 6px 0;">Freischaltung per Positionscode</h3>
-          <p class="muted">Gib den von der Übungsleitung vergebenen Positionscode ein (z. B. <strong>B7</strong>). Hinweis-Buchstabe wird erst nach korrektem Code sichtbar.</p>
+          <p class="muted">Gib den von der Übungsleitung vergebenen Positionscode ein. </p>
           <div class="row">
-            <input id="codeInput" type="text" inputmode="text" autocomplete="off" placeholder="Positionscode (z. B. B7)">
+            <input id="codeInput" type="text" inputmode="text" autocomplete="off" placeholder="Positionscode">
             <button id="codeBtn" class="btn danger" type="button">Code prüfen</button>
           </div>
           <div id="codeMsg" class="muted" style="margin-top:8px;"></div>
@@ -68,7 +68,7 @@
       </div>
 
       <details>
-        <summary>Info &amp; Konfiguration</summary>
+        <summary>Koordinaten</summary>
         <p class="muted"><strong>Koordinaten (WGS84):</strong> 50.450764, 9.614117<br><strong>Radius:</strong> 60 m</p>
       </details>
     </div>
@@ -82,8 +82,8 @@ const RADIUS_M = 60;
 
 // URL-Parameter: ?code=B7&letter=K
 const qs = new URLSearchParams(location.search);
-const EXPECTED_CODE = (qs.get("code") || "B7").toUpperCase().trim();
-const LETTER        = (qs.get("letter") || "K").toUpperCase().trim();
+const EXPECTED_CODE = (qs.get("code") || "B2").toUpperCase().trim();
+const LETTER        = (qs.get("letter") || "D").toUpperCase().trim();
 
 // Elemente
 const statusBox = document.getElementById("status");
@@ -130,7 +130,7 @@ function lockGate(){
 
 // Code freischalten
 function unlockLetter() {
-  hintSpan.textContent = LETTER;
+  hintSpan.textContent = `<strong>${LETTER}</strong>`;
   codeGate.style.display = "none";
 }
 
