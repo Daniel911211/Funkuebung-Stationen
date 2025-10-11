@@ -17,6 +17,7 @@
     .btn.success{background:var(--ok);color:#fff;border-color:var(--ok);}
     .task{margin-top:20px;border:1px dashed var(--border);padding:14px;border-radius:10px;}
     .task h2{text-decoration:underline;color:var(--brand);}
+    .imgwrap img{max-width:100%;height:auto;border:1px solid var(--border);border-radius:10px}
     .muted{color:var(--muted);}
     .gate{margin-top:14px;border:1px solid var(--border);padding:12px;border-radius:10px;}
     .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
@@ -37,7 +38,14 @@
         <div class="task">
           <h2>Hinweis &amp; Aufgabe</h2>
           <p><strong>Aufgabe:</strong> Kellerbrand: Lagemeldung nach FwDV 810 (Lage, Maßnahmen, Kräfte, Gefahren).</p>
-          <p><strong>Hinweis-Buchstabe:</strong> <span id="hint">—</span> <span class="muted">(wird nach Code-Freischaltung angezeigt)</span></p>
+          <p><strong>Hinweis-Buchstabe:</strong> <span id="hint">—</span> <span class="muted"></span></p>
+          <div class="imgwrap" style="margin-top:10px">
+  <a href="https://daniel911211.github.io/Bilder/Kellerbrand.png" target="_blank" rel="noopener">
+    <img src="https://daniel911211.github.io/Bilder/Kellerbrand.png" alt="Lagebild: Kellerbrand">
+  </a>
+  <div class="muted">Lagebild: <a href="https://daniel911211.github.io/Bilder/Kellerbrand.png" target="_blank" rel="noopener">Öffnen</a></div>
+</div>
+
         </div>
 
         <div id="codeGate" class="gate" style="display:none">
