@@ -40,7 +40,7 @@
           <p><strong>Aufgabe:</strong> BMA ausgelöst: Lagemeldung &amp; Maßnahmen, ggf. Kräfte nachfordern.</p>
           <p><strong>Hinweis-Buchstabe:</strong> <span id="hint">—</span> <span class="muted">(wird nach Code-Freischaltung angezeigt)</span></p>
 
-          <!-- BMA-Bildblock (wird nach erfolgreicher Standortprüfung je FHZ sofort angezeigt) -->
+          <!-- BMA-Bildblock -->
           <div id="bmaBlock" class="imgwrap" style="display:none;margin-top:10px">
             <a id="bmaLink" href="#" target="_blank" rel="noopener">
               <img id="bmaImg" src="#" alt="Lagebild: BMA">
@@ -68,18 +68,17 @@
   </div>
 
 <script>
-// Geofence
+// === Geofence ===
 const TARGET_LAT = 50.450764;
 const TARGET_LNG = 9.614117;
-const RADIUS_M = 60;
+const RADIUS_M   = 60;
 
-// FHZ aus URL (z. B. ?fhz=1 .. ?fhz=6)
+// === FHZ aus URL ( ?fhz=1..6 ) ===
 const qs = new URLSearchParams(location.search);
 const fhzRaw = (qs.get("fhz") || "").trim();
-const FHZ = /^[1-6]$/.test(fhzRaw) ? fhzRaw : ""; // nur 1..6 zulassen
+const FHZ = /^[1-6]$/.test(fhzRaw) ? fhzRaw : "";
 
-// Code-Mapping: Positionscode -> Buchstabe (aus 6-FHZ-Variante)
-// Hinweis: "/" wird sowohl in der Eingabe als auch hier NICHT verwendet.
+// === Code-Mapping: Positionscode -> Buchstabe ===
 const CODE_TO_LETTER = {
   "W1P5": "N",
   "W2P4": "R",
@@ -89,7 +88,7 @@ const CODE_TO_LETTER = {
   "W6P8": "␣ (Leerzeichen)"
 };
 
-// FHZ -> BMA-Bild (URLs je FHZ )
+// === FHZ -> BMA-Bild ===
 const FHZ_TO_IMAGE = {
   "1": "https://daniel911211.github.io/Bilder/BMA-Anzeige-Meldergruppe_10.jpg",
   "2": "https://daniel911211.github.io/Bilder/BMA-Anzeige-Meldergruppe_18.jpg",
@@ -99,46 +98,48 @@ const FHZ_TO_IMAGE = {
   "6": "https://daniel911211.github.io/Bilder/BMA-Anzeige-Meldergruppe_7.jpg"
 };
 
-// Elemente
+// === Elemente ===
 const statusBox = document.getElementById("status");
-const btn = document.getElementById("btn");
-const content = document.getElementById("content");
+const btn       = document.getElementById("btn");
+const content   = document.getElementById("content");
 const codeGate  = document.getElementById("codeGate");
 const codeInput = document.getElementById("codeInput");
 const codeBtn   = document.getElementById("codeBtn");
 const codeMsg   = document.getElementById("codeMsg");
 const hintSpan  = document.getElementById("hint");
-const bmaBlock = document.getElementById("bmaBlock");
-const bmaImg   = document.getElementById("bmaImg");
-const bmaLink  = document.getElementById("bmaLink");
-const bmaOpen  = document.getElementById("bmaOpen");
+const bmaBlock  = document.getElementById("bmaBlock");
+const bmaImg    = document.getElementById("bmaImg");
+const bmaLink   = document.getElementById("bmaLink");
+const bmaOpen   = document.getElementById("bmaOpen");
 
-// Haversine
+// === Bild vorladen (Block bleibt noch versteckt) ===
+(function preloadImageForFHZ(){
+  const imgUrl = FHZ_TO_IMAGE[FHZ];
+  if (imgUrl && bmaImg && bmaLink && bmaOpen) {
+    bmaImg.src  = imgUrl;
+    bmaLink.href = imgUrl;
+    bmaOpen.href = imgUrl;
+  }
+})();
+
+// === Haversine korrekt ===
 function haversine(lat1, lon1, lat2, lon2){
   const toRad = d => d * Math.PI / 180;
   const R = 6371000;
   const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lat2 == lat1 ? 0 : (lon2 - lon1)); // robust
-  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(toRad(lon2 - lon1)/2)**2;
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat/2)**2 +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+            Math.sin(dLon/2)**2;
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
 
-// UI-Helfer
-function setStatusOk(text){
-  statusBox.classList.remove("warn");
-  statusBox.classList.add("ok");
-  statusBox.innerHTML = `<strong>Status:</strong> ${text}`;
-  btn.classList.add("success");
-}
-function setStatusWarn(text){
-  statusBox.classList.remove("ok");
-  statusBox.classList.add("warn");
-  statusBox.innerHTML = `<strong>Status:</strong> ${text}`;
-  btn.classList.remove("success");
-}
+// === UI-Helfer ===
+function setStatusOk(text){  statusBox.classList.remove("warn"); statusBox.classList.add("ok");  statusBox.innerHTML = `<strong>Status:</strong> ${text}`; btn.classList.add("success"); }
+function setStatusWarn(text){statusBox.classList.remove("ok");   statusBox.classList.add("warn");statusBox.innerHTML = `<strong>Status:</strong> ${text}`; btn.classList.remove("success"); }
 
-// Bei jeder Standortprüfung: Buchstaben/Code/Bild zurücksetzen
+// Reset vor jeder Prüfung
 function lockGate(){
   hintSpan.textContent = "—";
   codeInput.value = "";
@@ -147,78 +148,63 @@ function lockGate(){
   if (bmaBlock) bmaBlock.style.display = "none";
 }
 
-// Freischalten: Buchstabe (fett+rot)
-function unlock(letter) {
+function unlock(letter){
   hintSpan.innerHTML = `<strong style="color:#c62828;">${letter}</strong>`;
   codeGate.style.display = "none";
 }
 
-// Standort prüfen
+// === Standort prüfen ===
 btn.addEventListener("click", () => {
-  if(!navigator.geolocation){
-    setStatusWarn("Geolocation wird nicht unterstützt.");
-    return;
-  }
-  // Bei jeder neuen Prüfung: zurücksetzen
+  if(!navigator.geolocation){ setStatusWarn("Geolocation wird nicht unterstützt."); return; }
   lockGate();
 
   setStatusWarn("Bitte Standortfreigabe erlauben …");
   navigator.geolocation.getCurrentPosition(pos => {
     const { latitude, longitude, accuracy } = pos.coords;
     const dist = haversine(latitude, longitude, TARGET_LAT, TARGET_LNG);
+
     if(dist <= RADIUS_M){
       setStatusOk(`Am richtigen Ort (≈ ${Math.round(dist)} m, Genauigkeit ±${Math.round(accuracy)} m).`);
       content.style.display = "block";
 
-      // >>> BMA-Bild sofort einblenden (je nach FHZ)
-      const imgUrl = FHZ_TO_IMAGE[FHZ];
-      if (imgUrl && bmaBlock && bmaImg && bmaLink && bmaOpen) {
-        bmaImg.src = imgUrl;
-        bmaLink.href = imgUrl;
-        bmaOpen.href = imgUrl;
+      // Bild jetzt einblenden (URL wurde bereits vorab gesetzt)
+      if (FHZ && FHZ_TO_IMAGE[FHZ]) {
         bmaBlock.style.display = "block";
       }
 
-      // Codefeld anzeigen – Buchstabe bleibt verborgen bis korrekter Code
+      // Codefeld anzeigen
       codeGate.style.display = "block";
     } else {
       setStatusWarn(`Nicht am richtigen Ort (Entfernung ≈ ${Math.round(dist)} m, Zielradius ${RADIUS_M} m).`);
       content.style.display = "none";
     }
-  }, err => {
+  }, () => {
     setStatusWarn("Standort konnte nicht ermittelt werden oder Zugriff verweigert.");
   }, { enableHighAccuracy:true, timeout:15000, maximumAge:0 });
 });
 
-// Codeprüfung
+// === Codeprüfung ===
 let tries = 0;
-if (codeBtn) {
-  codeBtn.addEventListener("click", () => {
-    const val = (codeInput.value || "")
-      .toUpperCase()
-      .trim()
-      .replace(/[\/\s]/g, ""); // "/" und Leerzeichen entfernen
+codeBtn?.addEventListener("click", () => {
+  const val = (codeInput.value || "").toUpperCase().trim().replace(/[\/\s]/g, "");
+  if (!val){ codeMsg.textContent = "Bitte Positionscode eingeben."; return; }
 
-    if (!val) { codeMsg.textContent = "Bitte Positionscode eingeben."; return; }
+  const raw = CODE_TO_LETTER[val] || null;
+  const letter = (raw === "␣") ? "␣ (Leerzeichen)" : raw;
 
-    // Wenn irgendwo noch "␣" ohne Zusatz stehen sollte, im Mapping vereinheitlichen:
-    const letterRaw = CODE_TO_LETTER[val] || null;
-    const letter = (letterRaw === "␣") ? "␣ (Leerzeichen)" : letterRaw;
-
-    if (letter) {
-      codeMsg.textContent = "Freigeschaltet ✅";
-      unlock(letter);
-    } else {
-      tries++;
-      codeMsg.textContent = `Falscher Code ❌ (Versuch ${tries}).`;
-      if (tries >= 3) {
-        codeMsg.textContent += " Warte 15 Sekunden …";
-        codeBtn.disabled = true;
-        setTimeout(() => { codeBtn.disabled = false; codeMsg.textContent = ""; tries = 0; }, 15000);
-      }
+  if (letter){
+    codeMsg.textContent = "Freigeschaltet ✅";
+    unlock(letter);
+  } else {
+    tries++;
+    codeMsg.textContent = `Falscher Code ❌ (Versuch ${tries}).`;
+    if (tries >= 3){
+      codeMsg.textContent += " Warte 15 Sekunden …";
+      codeBtn.disabled = true;
+      setTimeout(() => { codeBtn.disabled = false; codeMsg.textContent = ""; tries = 0; }, 15000);
     }
-  });
-}
+  }
+});
 </script>
 </body>
 </html>
