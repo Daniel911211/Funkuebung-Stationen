@@ -20,7 +20,8 @@
     .muted{color:var(--muted);}
     .gate{margin-top:14px;border:1px solid var(--border);padding:12px;border-radius:10px;}
     .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
-    input[type="text"]{padding:.6rem .7rem;border:1px solid var(--border);border-radius:10px;min-width:200px;}
+    input[type="text"]{padding:.6rem .7rem;border:1px solid var(--border);border-radius:10px;min-width:220px;}
+    .out strong{color:#c62828;}
   </style>
 </head>
 <body>
@@ -36,18 +37,27 @@
       <div id="content" style="display:none">
         <div class="task">
           <h2>Hinweis &amp; Aufgabe</h2>
-          <p><strong>Aufgabe:</strong> ⚠ Platzhalter: Hier kommt noch eine Zusatz-Aufgabe hin.</p>
-          <p><strong>Hinweis-Buchstabe:</strong> <span id="hint">—</span> <span class="muted">(wird nach Code-Freischaltung angezeigt)</span></p>
-        </div>
+          <p><strong>Aufgabe:</strong> Meldet euch über Funk bei der Übungsleitung. Ihr erhaltet ein <em>Abfragewort</em>. Gebt es unten ein, um eure Aufgabe anzeigen zulassen.</p>
+          <p><strong>Hinweis-Buchstabe:</strong> <span id="hint">—</span> <span class="muted"></span></p>
 
-        <div id="codeGate" class="gate" style="display:none">
-          <h3 style="margin:0 0 6px 0;">Freischaltung per Positionscode</h3>
-          <p class="muted">Gib den von der Übungsleitung vergebenen Positionscode ein.</p>
-          <div class="row">
-            <input id="codeInput" type="text" inputmode="text" autocomplete="off" placeholder="Positionscode">
-            <button id="codeBtn" class="btn danger" type="button">Code prüfen</button>
+          <!-- Freischaltung per Abfragewort -->
+          <div id="wordGate" class="gate" style="display:none">
+            <h3 style="margin:0 0 6px 0;">Freischaltung per Abfragewort</h3>
+            <p class="muted">Abfragewort von der Übungsleitung eingeben (Groß-/Kleinschreibung egal).</p>
+            <div class="row">
+              <input id="wordInput" type="text" autocomplete="off" placeholder="Abfragewort">
+              <button id="wordBtn" class="btn danger" type="button">Wort prüfen</button>
+            </div>
+            <div id="wordMsg" class="muted" style="margin-top:8px;"></div>
           </div>
-          <div id="codeMsg" class="muted" style="margin-top:8px;"></div>
+
+          <!-- Ausgabe nach Freischaltung -->
+          <div id="out" class="out" style="display:none; margin-top:12px">
+            <p><strong>Anzurufendes FHZ:</strong> <span id="outCall"></span></p>
+            <p><strong>Frage:</strong> <span id="outQuestion"></span></p>
+            <p><strong>Lösungsbuchstabe:</strong> <strong id="outLetter"></strong></p>
+            <p><strong>Positionscode:</strong> <strong id="outCode"></strong></p>
+          </div>
         </div>
       </div>
 
@@ -59,78 +69,65 @@
   </div>
 
 <script>
-// Geofence
+// === Geofence ===
 const TARGET_LAT = 50.450764;
 const TARGET_LNG = 9.614117;
-const RADIUS_M = 60;
+const RADIUS_M   = 60;
 
-// Code-Mapping: Positionscode -> Buchstabe (aus 6-FHZ-Variante)
-const CODE_TO_LETTER = {
-  "W1P8": "I",
-  "W2P7": "U",
-  "W3P6": "A",
-  "W4P5": "A",
-  "W5P4": "E",
-  "W6P3": "E"
+// === Abfragewörter → Payload ===
+// Diese Tabelle pflegen: Wort -> { call, question, letter, code }
+const WORD_PAYLOAD = {
+  "Anton":   { call:"FHZ 2", question:"Welche Pumpe ist im TSF verbaut?",                                  letter:"I", code:"W1P8" },
+  "Berta":   { call:"FHZ 3", question:"Wie viele Einsatzkräfte kann euer Fahrzeug maximal aufnehmen?",    letter:"U", code:"W2P7" },
+  "Cäsar": { call:"FHZ 4", question:"Welche Materialien/Ausrüstungen transportiert ihr mit dem GW-L?",  letter:"A", code:"W3P6" },
+  "Dora":   { call:"FHZ 5", question:"Wie viele Saugschläuche führt euer Fahrzeug mit?",                 letter:"A", code:"W4P5" },
+  "Emil":    { call:"FHZ 6", question:"Welche technischen Geräte nutzt ihr zur Menschenrettung bei VU?",  letter:"E", code:"W5P4" },
+  "Friedrich": { call:"FHZ 1", question:"Welche Aufgaben hat der Einsatzleitwagen an der Einsatzstelle?",   letter:"E", code:"W6P3" }
 };
+// Optional: ihr könnt auch z. B. "ALFA" zusätzlich auf "ALPHA" mappen:
+WORD_PAYLOAD["ALFA"] = WORD_PAYLOAD["ALPHA"];
 
-// Elemente
+// === Elemente ===
 const statusBox = document.getElementById("status");
-const btn = document.getElementById("btn");
-const content = document.getElementById("content");
-const codeGate  = document.getElementById("codeGate");
-const codeInput = document.getElementById("codeInput");
-const codeBtn   = document.getElementById("codeBtn");
-const codeMsg   = document.getElementById("codeMsg");
+const btn       = document.getElementById("btn");
+const content   = document.getElementById("content");
+
+const wordGate  = document.getElementById("wordGate");
+const wordInput = document.getElementById("wordInput");
+const wordBtn   = document.getElementById("wordBtn");
+const wordMsg   = document.getElementById("wordMsg");
+
+const outBox    = document.getElementById("out");
+const outCall   = document.getElementById("outCall");
+const outQ      = document.getElementById("outQuestion");
+const outLetter = document.getElementById("outLetter");
+const outCode   = document.getElementById("outCode");
 const hintSpan  = document.getElementById("hint");
 
-// Haversine
+// === Haversine ===
 function haversine(lat1, lon1, lat2, lon2){
-  const toRad = d => d * Math.PI / 180;
-  const R = 6371000;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
+  const toRad = d => d * Math.PI / 180, R = 6371000;
+  const dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1);
   const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
+  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// UI-Helfer
-function setStatusOk(text){
-  statusBox.classList.remove("warn");
-  statusBox.classList.add("ok");
-  statusBox.innerHTML = `<strong>Status:</strong> ${text}`;
-  btn.classList.add("success");
-}
-function setStatusWarn(text){
-  statusBox.classList.remove("ok");
-  statusBox.classList.add("warn");
-  statusBox.innerHTML = `<strong>Status:</strong> ${text}`;
-  btn.classList.remove("success");
-}
+// === UI-Helfer ===
+function setStatusOk(text){  statusBox.classList.remove("warn"); statusBox.classList.add("ok");  statusBox.innerHTML = `<strong>Status:</strong> ${text}`; btn.classList.add("success"); }
+function setStatusWarn(text){statusBox.classList.remove("ok");   statusBox.classList.add("warn");statusBox.innerHTML = `<strong>Status:</strong> ${text}`; btn.classList.remove("success"); }
 
-// Bei jeder Standortprüfung: Buchstaben/Code zurücksetzen
-function lockGate(){
+function resetGate(){
   hintSpan.textContent = "—";
-  codeInput.value = "";
-  codeMsg.textContent = "";
-  codeGate.style.display = "none";
+  wordInput.value = "";
+  wordMsg.textContent = "";
+  wordGate.style.display = "none";
+  outBox.style.display = "none";
 }
 
-// Code freischalten (Buchstabe fett + rot)
-function unlockLetter(letter) {
-  hintSpan.innerHTML = `<strong style="color:#c62828;">${letter}</strong>`;
-  codeGate.style.display = "none";
-}
-
-// Standort prüfen
+// === Standort prüfen ===
 btn.addEventListener("click", () => {
-  if(!navigator.geolocation){
-    setStatusWarn("Geolocation wird nicht unterstützt.");
-    return;
-  }
-  // Bei jeder neuen Prüfung: erneut Code verlangen
-  lockGate();
+  if(!navigator.geolocation){ setStatusWarn("Geolocation wird nicht unterstützt."); return; }
+  resetGate();
 
   setStatusWarn("Bitte Standortfreigabe erlauben …");
   navigator.geolocation.getCurrentPosition(pos => {
@@ -139,8 +136,7 @@ btn.addEventListener("click", () => {
     if(dist <= RADIUS_M){
       setStatusOk(`Am richtigen Ort (≈ ${Math.round(dist)} m, Genauigkeit ±${Math.round(accuracy)} m).`);
       content.style.display = "block";
-      // Codefeld anzeigen – Buchstabe bleibt verborgen bis korrekter Code
-      codeGate.style.display = "block";
+      wordGate.style.display = "block";     // Abfragewort jetzt erlauben
     } else {
       setStatusWarn(`Nicht am richtigen Ort (Entfernung ≈ ${Math.round(dist)} m, Zielradius ${RADIUS_M} m).`);
       content.style.display = "none";
@@ -150,27 +146,32 @@ btn.addEventListener("click", () => {
   }, { enableHighAccuracy:true, timeout:15000, maximumAge:0 });
 });
 
-// Codeprüfung
+// === Abfragewort prüfen ===
 let tries = 0;
-if (codeBtn) {
-  codeBtn.addEventListener("click", () => {
-    const val = (codeInput.value || "").toUpperCase().trim();
-    if (!val) { codeMsg.textContent = "Bitte Positionscode eingeben."; return; }
-    const letter = CODE_TO_LETTER[val] || null;
-    if (letter) {
-      codeMsg.textContent = "Freigeschaltet ✅";
-      unlockLetter(letter);
-    } else {
-      tries++;
-      codeMsg.textContent = `Falscher Code ❌ (Versuch ${tries}).`;
-      if (tries >= 3) {
-        codeMsg.textContent += " Warte 15 Sekunden …";
-        codeBtn.disabled = true;
-        setTimeout(() => { codeBtn.disabled = false; codeMsg.textContent = ""; tries = 0; }, 15000);
-      }
+wordBtn.addEventListener("click", () => {
+  const key = (wordInput.value || "").toUpperCase().trim().replace(/\s+/g,"");
+  if(!key){ wordMsg.textContent = "Bitte Abfragewort eingeben."; return; }
+
+  const payload = WORD_PAYLOAD[key];
+  if(payload){
+    wordMsg.textContent = "Freigeschaltet ✅";
+    // Ausgabe füllen
+    outCall.textContent   = payload.call;
+    outQ.textContent      = payload.question;
+    outLetter.textContent = payload.letter;   // fett/rot via CSS
+    outCode.textContent   = payload.code;     // fett/rot via CSS
+    hintSpan.innerHTML    = `<strong style="color:#c62828;">${payload.letter}</strong>`;
+    outBox.style.display  = "block";
+  }else{
+    tries++;
+    wordMsg.textContent = `Falsches Wort ❌ (Versuch ${tries}).`;
+    if(tries >= 3){
+      wordMsg.textContent += " Warte 15 Sekunden …";
+      wordBtn.disabled = true;
+      setTimeout(() => { wordBtn.disabled = false; wordMsg.textContent = ""; tries = 0; }, 15000);
     }
-  });
-}
+  }
+});
 </script>
 </body>
 </html>
