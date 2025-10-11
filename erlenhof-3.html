@@ -21,6 +21,7 @@
     .gate{margin-top:14px;border:1px solid var(--border);padding:12px;border-radius:10px;}
     .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
     input[type="text"]{padding:.6rem .7rem;border:1px solid var(--border);border-radius:10px;min-width:200px;}
+    .imgwrap img{max-width:100%;height:auto;border:1px solid var(--border);border-radius:10px}
   </style>
 </head>
 <body>
@@ -38,6 +39,14 @@
           <h2>Hinweis &amp; Aufgabe</h2>
           <p><strong>Aufgabe:</strong> Wasserversorgung erkunden (Teich/Schieber) und Rückmeldung geben.</p>
           <p><strong>Hinweis-Buchstabe:</strong> <span id="hint">—</span> <span class="muted">(wird nach Code-Freischaltung angezeigt)</span></p>
+
+          <!-- Lagebild: Scheune Erlenhof (sofort nach erfolgreicher Standortprüfung sichtbar) -->
+          <div id="imgBlock" class="imgwrap" style="display:none;margin-top:10px">
+            <a id="imgLink" href="#" target="_blank" rel="noopener">
+              <img id="imgEl" src="#" alt="Lagebild: Scheune Erlenhof">
+            </a>
+            <div class="muted">Lagebild: <a id="imgOpen" href="#" target="_blank" rel="noopener">Öffnen</a></div>
+          </div>
         </div>
 
         <div id="codeGate" class="gate" style="display:none">
@@ -74,6 +83,9 @@ const CODE_TO_LETTER = {
   "W6P4": "U"
 };
 
+// Bild-URL (fix für diese Station)
+const IMAGE_URL = "https://daniel911211.github.io/Bilder/scheuneerlenhof.png";
+
 // Elemente
 const statusBox = document.getElementById("status");
 const btn = document.getElementById("btn");
@@ -83,6 +95,10 @@ const codeInput = document.getElementById("codeInput");
 const codeBtn   = document.getElementById("codeBtn");
 const codeMsg   = document.getElementById("codeMsg");
 const hintSpan  = document.getElementById("hint");
+const imgBlock = document.getElementById("imgBlock");
+const imgEl    = document.getElementById("imgEl");
+const imgLink  = document.getElementById("imgLink");
+const imgOpen  = document.getElementById("imgOpen");
 
 // Haversine
 function haversine(lat1, lon1, lat2, lon2){
@@ -109,12 +125,13 @@ function setStatusWarn(text){
   btn.classList.remove("success");
 }
 
-// Bei jeder Standortprüfung: Buchstaben/Code zurücksetzen
+// Bei jeder Standortprüfung: Buchstaben/Code/Bild zurücksetzen
 function lockGate(){
   hintSpan.textContent = "—";
   codeInput.value = "";
   codeMsg.textContent = "";
   codeGate.style.display = "none";
+  if (imgBlock) imgBlock.style.display = "none";
 }
 
 // Code freischalten (Buchstabe fett + rot)
@@ -129,7 +146,7 @@ btn.addEventListener("click", () => {
     setStatusWarn("Geolocation wird nicht unterstützt.");
     return;
   }
-  // Bei jeder neuen Prüfung: erneut Code verlangen
+  // Bei jeder neuen Prüfung: erneut Code verlangen & Bild verbergen
   lockGate();
 
   setStatusWarn("Bitte Standortfreigabe erlauben …");
@@ -139,6 +156,15 @@ btn.addEventListener("click", () => {
     if(dist <= RADIUS_M){
       setStatusOk(`Am richtigen Ort (≈ ${Math.round(dist)} m, Genauigkeit ±${Math.round(accuracy)} m).`);
       content.style.display = "block";
+
+      // Bild sofort einblenden
+      if (IMAGE_URL && imgBlock && imgEl && imgLink && imgOpen) {
+        imgEl.src = IMAGE_URL;
+        imgLink.href = IMAGE_URL;
+        imgOpen.href = IMAGE_URL;
+        imgBlock.style.display = "block";
+      }
+
       // Codefeld anzeigen – Buchstabe bleibt verborgen bis korrekter Code
       codeGate.style.display = "block";
     } else {
@@ -154,8 +180,13 @@ btn.addEventListener("click", () => {
 let tries = 0;
 if (codeBtn) {
   codeBtn.addEventListener("click", () => {
-    const val = (codeInput.value || "").toUpperCase().trim();
+    const val = (codeInput.value || "")
+      .toUpperCase()
+      .trim()
+      .replace(/[\/\s]/g, ""); // "/" und Leerzeichen entfernen
+
     if (!val) { codeMsg.textContent = "Bitte Positionscode eingeben."; return; }
+
     const letter = CODE_TO_LETTER[val] || null;
     if (letter) {
       codeMsg.textContent = "Freigeschaltet ✅";
