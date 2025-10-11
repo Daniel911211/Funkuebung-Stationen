@@ -93,12 +93,20 @@ const hintSpan  = document.getElementById("hint");
 
 // Abfragewörter (nur nötig, wenn du das Gate nutzt)
 const WORD_PAYLOAD = {
-  "ANTON":     { call:"FHZ 2", question:"Welche Pumpe ist im TSF verlasstet?",                                    letter:"I", code:"W1P8" },
-  "BERTA":     { call:"FHZ 3", question:"Wie viele Einsatzkräfte kann euer Fahrzeug maximal aufnehmen?",          letter:"U", code:"W2P7" },
-  "CAESAR":    { call:"FHZ 4", question:"Welche Materialien/Ausrüstungen transportiert ihr mit dem GW-L?",        letter:"A", code:"W3P6" },
-  "DORA":      { call:"FHZ 5", question:"Wie viele Saugschläuche führt euer Fahrzeug mit?",                       letter:"A", code:"W4P5" },
-  "EMIL":      { call:"FHZ 6", question:"Welche technisches Gerät wird zur Menschenrettung bei VU eingesetzt?",   letter:"E", code:"W5P4" },
-  "FRIEDRICH": { call:"FHZ 1", question:"Welche Aufgaben hat der Einsatzleitwagen an der Einsatzstelle?",         letter:"E", code:"W6P3" }
+  // Voll-Variante (6 FHZ) – Beispiele (kannst du beibehalten/anpassen)
+  "ANTON":     { call:"FHZ 2", question:"Welche Pumpe ist im TSF verbaut?",                                  letter:"U", code:"W2P7" },
+  "BERTA":     { call:"FHZ 3", question:"Wie viele Einsatzkräfte kann euer Fahrzeug maximal aufnehmen?",    letter:"A", code:"W3P6" },
+  "CÄSAR":     { call:"FHZ 4", question:"Welche Materialien/Ausrüstungen transportiert ihr mit dem GW-L?",  letter:"A", code:"W4P5" },
+  "DORA":      { call:"FHZ 5", question:"Wie viele Saugschläuche führt euer Fahrzeug mit?",                 letter:"E", code:"W5P4" },
+  "EMIL":      { call:"FHZ 6", question:"Welche technischen Geräte nutzt ihr zur Menschenrettung bei VU?",  letter:"E", code:"W6P3" },
+  "FRIEDRICH": { call:"FHZ 1", question:"Welche Aufgaben hat der Einsatzleitwagen an der Einsatzstelle?",   letter:"I", code:"W1P8" },
+
+  // — Varianten —
+  // Variante 4: FHZ 4 stellt Frage an FHZ 1 → FHZ 1 bekommt E / W6P3
+  "KAUFMANN":  { call:"FHZ 1", question:"(Var. 4) FHZ 4 → FHZ 1: Wie viele Saugschläuche führt euer Fahrzeug mit?", letter:"E", code:"W6P3" },
+
+  // Variante 5: FHZ 5 stellt Frage an FHZ 1 → FHZ 1 bekommt I / W1P8
+  "PAULA":     { call:"FHZ 1", question:"(Var. 5) FHZ 5 → FHZ 1: Welche technischen Geräte nutzt ihr zur Menschenrettung bei VU?", letter:"I", code:"W1P8" },
 };
 
 // Eingabe normalisieren (Umlaute, Großschreibung, Leerzeichen)
