@@ -21,6 +21,7 @@
     .gate{margin-top:14px;border:1px solid var(--border);padding:12px;border-radius:10px;}
     .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
     input[type="text"]{padding:.6rem .7rem;border:1px solid var(--border);border-radius:10px;min-width:200px;}
+    .imgwrap img{max-width:100%;height:auto;border:1px solid var(--border);border-radius:10px}
   </style>
 </head>
 <body>
@@ -36,8 +37,16 @@
       <div id="content" style="display:none">
         <div class="task">
           <h2>Hinweis &amp; Aufgabe</h2>
-          <p><strong>Aufgabe:</strong> BMA ausgelöst: Lagemeldung & Maßnahmen, ggf. Kräfte nachfordern.</p>
+          <p><strong>Aufgabe:</strong> BMA ausgelöst: Lagemeldung &amp; Maßnahmen, ggf. Kräfte nachfordern.</p>
           <p><strong>Hinweis-Buchstabe:</strong> <span id="hint">—</span> <span class="muted">(wird nach Code-Freischaltung angezeigt)</span></p>
+
+          <!-- BMA-Bildblock (wird nach Freischaltung je FHZ angezeigt) -->
+          <div id="bmaBlock" class="imgwrap" style="display:none;margin-top:10px">
+            <a id="bmaLink" href="#" target="_blank" rel="noopener">
+              <img id="bmaImg" src="#" alt="Lagebild: BMA">
+            </a>
+            <div class="muted">Lagebild: <a id="bmaOpen" href="#" target="_blank" rel="noopener">Öffnen</a></div>
+          </div>
         </div>
 
         <div id="codeGate" class="gate" style="display:none">
@@ -64,14 +73,30 @@ const TARGET_LAT = 50.450764;
 const TARGET_LNG = 9.614117;
 const RADIUS_M = 60;
 
+// FHZ aus URL (z. B. ?fhz=1 .. ?fhz=6)
+const qs = new URLSearchParams(location.search);
+const fhzRaw = (qs.get("fhz") || "").trim();
+const FHZ = /^[1-6]$/.test(fhzRaw) ? fhzRaw : ""; // nur 1..6 zulassen
+
 // Code-Mapping: Positionscode -> Buchstabe (aus 6-FHZ-Variante)
+// Hinweis: "/" wird sowohl in der Eingabe als auch hier NICHT verwendet.
 const CODE_TO_LETTER = {
   "W1P5": "N",
   "W2P4": "R",
   "W3P3": "S",
-  "W4P2": "␣",
+  "W4P2": "␣ (Leerzeichen)",
   "W5P1": "L",
   "W6P8": "␣ (Leerzeichen)"
+};
+
+// FHZ -> BMA-Bild (Platzhalter-URLs; bitte je FHZ anpassen)
+const FHZ_TO_IMAGE = {
+  "1": "https://daniel911211.github.io/Bilder/BMA.png",
+  "2": "https://daniel911211.github.io/Bilder/BMA.png",
+  "3": "https://daniel911211.github.io/Bilder/BMA.png",
+  "4": "https://daniel911211.github.io/Bilder/BMA.png",
+  "5": "https://daniel911211.github.io/Bilder/BMA.png",
+  "6": "https://daniel911211.github.io/Bilder/BMA.png"
 };
 
 // Elemente
@@ -83,6 +108,10 @@ const codeInput = document.getElementById("codeInput");
 const codeBtn   = document.getElementById("codeBtn");
 const codeMsg   = document.getElementById("codeMsg");
 const hintSpan  = document.getElementById("hint");
+const bmaBlock = document.getElementById("bmaBlock");
+const bmaImg   = document.getElementById("bmaImg");
+const bmaLink  = document.getElementById("bmaLink");
+const bmaOpen  = document.getElementById("bmaOpen");
 
 // Haversine
 function haversine(lat1, lon1, lat2, lon2){
@@ -109,17 +138,27 @@ function setStatusWarn(text){
   btn.classList.remove("success");
 }
 
-// Bei jeder Standortprüfung: Buchstaben/Code zurücksetzen
+// Bei jeder Standortprüfung: Buchstaben/Code/Bild zurücksetzen
 function lockGate(){
   hintSpan.textContent = "—";
   codeInput.value = "";
   codeMsg.textContent = "";
   codeGate.style.display = "none";
+  if (bmaBlock) bmaBlock.style.display = "none";
 }
 
-// Code freischalten (Buchstabe fett + rot)
-function unlockLetter(letter) {
+// Freischalten: Buchstabe (fett+rot) + BMA-Bild je FHZ
+function unlock(letter) {
   hintSpan.innerHTML = `<strong style="color:#c62828;">${letter}</strong>`;
+
+  const imgUrl = FHZ_TO_IMAGE[FHZ];
+  if (imgUrl && bmaBlock && bmaImg && bmaLink && bmaOpen) {
+    bmaImg.src = imgUrl;
+    bmaLink.href = imgUrl;
+    bmaOpen.href = imgUrl;
+    bmaBlock.style.display = "block";
+  }
+
   codeGate.style.display = "none";
 }
 
@@ -154,12 +193,17 @@ btn.addEventListener("click", () => {
 let tries = 0;
 if (codeBtn) {
   codeBtn.addEventListener("click", () => {
-    const val = (codeInput.value || "").toUpperCase().trim();
+    const val = (codeInput.value || "")
+      .toUpperCase()
+      .trim()
+      .replace(/[\/\s]/g, ""); // "/" und Leerzeichen entfernen
+
     if (!val) { codeMsg.textContent = "Bitte Positionscode eingeben."; return; }
+
     const letter = CODE_TO_LETTER[val] || null;
     if (letter) {
       codeMsg.textContent = "Freigeschaltet ✅";
-      unlockLetter(letter);
+      unlock(letter);
     } else {
       tries++;
       codeMsg.textContent = `Falscher Code ❌ (Versuch ${tries}).`;
