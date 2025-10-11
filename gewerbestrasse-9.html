@@ -40,7 +40,7 @@
           <p><strong>Aufgabe:</strong> BMA ausgelöst: Lagemeldung &amp; Maßnahmen, ggf. Kräfte nachfordern.</p>
           <p><strong>Hinweis-Buchstabe:</strong> <span id="hint">—</span> <span class="muted">(wird nach Code-Freischaltung angezeigt)</span></p>
 
-          <!-- BMA-Bildblock (wird nach Freischaltung je FHZ angezeigt) -->
+          <!-- BMA-Bildblock (wird nach erfolgreicher Standortprüfung je FHZ sofort angezeigt) -->
           <div id="bmaBlock" class="imgwrap" style="display:none;margin-top:10px">
             <a id="bmaLink" href="#" target="_blank" rel="noopener">
               <img id="bmaImg" src="#" alt="Lagebild: BMA">
@@ -89,14 +89,14 @@ const CODE_TO_LETTER = {
   "W6P8": "␣ (Leerzeichen)"
 };
 
-// FHZ -> BMA-Bild (Platzhalter-URLs; bitte je FHZ anpassen)
+// FHZ -> BMA-Bild (URLs je FHZ – hier noch Platzhalter, gern mit echten Bildnamen ersetzen)
 const FHZ_TO_IMAGE = {
-  "1": "https://daniel911211.github.io/Bilder/BMA.png",
-  "2": "https://daniel911211.github.io/Bilder/BMA.png",
-  "3": "https://daniel911211.github.io/Bilder/BMA.png",
-  "4": "https://daniel911211.github.io/Bilder/BMA.png",
-  "5": "https://daniel911211.github.io/Bilder/BMA.png",
-  "6": "https://daniel911211.github.io/Bilder/BMA.png"
+  "1": "https://daniel911211.github.io/Bilder/BMA-Anzeige-Meldergruppe_10.jpg",
+  "2": "https://daniel911211.github.io/Bilder/BMA-Anzeige-Meldergruppe_18.jpg",
+  "3": "https://daniel911211.github.io/Bilder/BMA-Anzeige-Meldergruppe_5.jpg",
+  "4": "https://daniel911211.github.io/Bilder/BMA-Anzeige-Meldergruppe_57.png",
+  "5": "https://daniel911211.github.io/Bilder/BMA-Anzeige-Meldergruppe_60.jpg",
+  "6": "https://daniel911211.github.io/Bilder/BMA-Anzeige-Meldergruppe_7.jpg"
 };
 
 // Elemente
@@ -118,8 +118,8 @@ function haversine(lat1, lon1, lat2, lon2){
   const toRad = d => d * Math.PI / 180;
   const R = 6371000;
   const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+  const dLon = toRad(lat2 == lat1 ? 0 : (lon2 - lon1)); // robust
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(toRad(lon2 - lon1)/2)**2;
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
@@ -147,18 +147,9 @@ function lockGate(){
   if (bmaBlock) bmaBlock.style.display = "none";
 }
 
-// Freischalten: Buchstabe (fett+rot) + BMA-Bild je FHZ
+// Freischalten: Buchstabe (fett+rot)
 function unlock(letter) {
   hintSpan.innerHTML = `<strong style="color:#c62828;">${letter}</strong>`;
-
-  const imgUrl = FHZ_TO_IMAGE[FHZ];
-  if (imgUrl && bmaBlock && bmaImg && bmaLink && bmaOpen) {
-    bmaImg.src = imgUrl;
-    bmaLink.href = imgUrl;
-    bmaOpen.href = imgUrl;
-    bmaBlock.style.display = "block";
-  }
-
   codeGate.style.display = "none";
 }
 
@@ -168,7 +159,7 @@ btn.addEventListener("click", () => {
     setStatusWarn("Geolocation wird nicht unterstützt.");
     return;
   }
-  // Bei jeder neuen Prüfung: erneut Code verlangen
+  // Bei jeder neuen Prüfung: zurücksetzen
   lockGate();
 
   setStatusWarn("Bitte Standortfreigabe erlauben …");
@@ -178,6 +169,16 @@ btn.addEventListener("click", () => {
     if(dist <= RADIUS_M){
       setStatusOk(`Am richtigen Ort (≈ ${Math.round(dist)} m, Genauigkeit ±${Math.round(accuracy)} m).`);
       content.style.display = "block";
+
+      // >>> BMA-Bild sofort einblenden (je nach FHZ)
+      const imgUrl = FHZ_TO_IMAGE[FHZ];
+      if (imgUrl && bmaBlock && bmaImg && bmaLink && bmaOpen) {
+        bmaImg.src = imgUrl;
+        bmaLink.href = imgUrl;
+        bmaOpen.href = imgUrl;
+        bmaBlock.style.display = "block";
+      }
+
       // Codefeld anzeigen – Buchstabe bleibt verborgen bis korrekter Code
       codeGate.style.display = "block";
     } else {
@@ -200,7 +201,10 @@ if (codeBtn) {
 
     if (!val) { codeMsg.textContent = "Bitte Positionscode eingeben."; return; }
 
-    const letter = CODE_TO_LETTER[val] || null;
+    // Wenn irgendwo noch "␣" ohne Zusatz stehen sollte, im Mapping vereinheitlichen:
+    const letterRaw = CODE_TO_LETTER[val] || null;
+    const letter = (letterRaw === "␣") ? "␣ (Leerzeichen)" : letterRaw;
+
     if (letter) {
       codeMsg.textContent = "Freigeschaltet ✅";
       unlock(letter);
