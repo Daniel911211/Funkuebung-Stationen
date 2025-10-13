@@ -51,9 +51,9 @@
           </div>
 
           <div id="out" class="out" style="display:none; margin-top:12px">
-            <p><strong>Anzurufendes FHZ:</strong> <span id="outCall"></span></p>
+            <p><strong>Funkpartner:</strong> <span id="outCall"></span></p>
             <p><strong>Frage:</strong> <span id="outQuestion"></span></p>
-            <p>Lösungsbuchstabe und Positionscode weitergeben (auch wenn falsch beantwortet wurde).</p>
+            <p>Buchstabe und Positionscode weitergeben (auch wenn falsch beantwortet wurde).</p>
             <p><strong>Lösungsbuchstabe:</strong> <strong id="outLetter"></strong></p>
             <p><strong>Positionscode:</strong> <strong id="outCode"></strong></p>
             
@@ -91,7 +91,7 @@ const hintSpan  = document.getElementById("hint");
 // Abfragewörter (nur nötig, wenn du das Gate nutzt)
 const WORD_PAYLOAD = {
   // Variante (6 FHZ) – Beispiele (kannst du beibehalten/anpassen)
-  "ANTON":     { call:"NHF 1/46/2", question:"Welche Pumpe ist im TSF verbaut?",                                  letter:"U", code:"W2P7" },
+  "ANTON":     { call:"NHF 1/46/2", question:"Was bedeutet die Abkürung TSF?",                                  letter:"U", code:"W2P7" },
   "BERTA":     { call:"NHF 1/64/1", question:"Wie viele Einsatzkräfte kann euer Fahrzeug maximal aufnehmen?",    letter:"A", code:"W3P6" },
   "Julius":     { call:"NHF 1/19/1", question:"Welche Materialien/Ausrüstungen transportiert ihr mit dem GW-L?",  letter:"A", code:"W4P5" },
   "DORA":      { call:"NHF 1/47/1", question:"Wie viele Saugschläuche führt euer Fahrzeug mit?",                 letter:"E", code:"W5P4" },
