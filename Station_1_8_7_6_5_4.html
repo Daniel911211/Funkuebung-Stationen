@@ -22,6 +22,7 @@
     .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
     input[type="text"]{padding:.6rem .7rem;border:1px solid var(--border);border-radius:10px;min-width:200px;}
     .imgwrap img{max-width:100%;height:auto;border:1px solid var(--border);border-radius:10px}
+    .station-box{display:none;margin-top:20px;border-top:1px solid #ddd;padding-top:10px;font-size:16px;}
   </style>
 </head>
 <body>
@@ -40,7 +41,12 @@
           <p><strong>Aufgabe:</strong> Wasserversorgung erkunden und Rückmeldung geben.</p>
           <p><strong>Hinweis-Buchstabe:</strong> <span id="hint">—</span> <span class="muted"></span></p>
 
-          <!-- Lagebild: Scheune Erlenhof (sofort nach erfolgreicher Standortprüfung sichtbar) -->
+          <!-- 💡 Hier wird die Station nach Codefreischaltung angezeigt -->
+          <div id="stationBox" class="station-box">
+            <strong>Station:</strong> <span id="stationName">—</span>
+          </div>
+
+          <!-- Lagebild -->
           <div id="imgBlock" class="imgwrap" style="display:none;margin-top:10px">
             <a id="imgLink" href="#" target="_blank" rel="noopener">
               <img id="imgEl" src="#" alt="Lagebild: Scheune Erlenhof">
@@ -59,18 +65,16 @@
           <div id="codeMsg" class="muted" style="margin-top:8px;"></div>
         </div>
       </div>
-
-      
     </div>
   </div>
 
 <script>
-// Geofence
+// === Geofence ===
 const TARGET_LAT = 50.450758;  
 const TARGET_LNG = 9.614094;
 const RADIUS_M = 60;
 
-// Code-Mapping: Positionscode -> Buchstabe (aus 6-FHZ-Variante)
+// === Code-Mapping: Positionscode -> Buchstabe ===
 const CODE_TO_LETTER = {
   "W1P1": "O",
   "W2P8": "N",
@@ -80,10 +84,22 @@ const CODE_TO_LETTER = {
   "W6P4": "U"
 };
 
-// Bild-URL (fix für diese Station)
+// === Code-Mapping: Positionscode -> Station ===
+const CODE_TO_STATION = {
+  "W1P1": "Erlenhof 3 (Neuhof)",
+  "W1P2": "Brüder-Grimm-Str. 12 (Rommerz)",
+  "W1P3": "Am Stück 22 (Rommerz)",
+  "W1P4": "Im Haferfeld 7 (Neuhof)",
+  "W1P5": "Gewerbestraße 9 (Dorfborn, GTÜ)",
+  "W1P6": "Rasenheeg 6 (Hattenhof)",
+  "W1P7": "Rettungspunkt FD-543 (Bahnbrücke Ri. Hattenhof)",
+  "W1P8": "Frankfurter Str. 38A (Neuhof)"
+};
+
+// === Bild-URL ===
 const IMAGE_URL = "https://daniel911211.github.io/Bilder/scheuneerlenhof.png";
 
-// Elemente
+// === Elemente ===
 const statusBox = document.getElementById("status");
 const btn = document.getElementById("btn");
 const content = document.getElementById("content");
@@ -92,12 +108,14 @@ const codeInput = document.getElementById("codeInput");
 const codeBtn   = document.getElementById("codeBtn");
 const codeMsg   = document.getElementById("codeMsg");
 const hintSpan  = document.getElementById("hint");
-const imgBlock = document.getElementById("imgBlock");
-const imgEl    = document.getElementById("imgEl");
-const imgLink  = document.getElementById("imgLink");
-const imgOpen  = document.getElementById("imgOpen");
+const imgBlock  = document.getElementById("imgBlock");
+const imgEl     = document.getElementById("imgEl");
+const imgLink   = document.getElementById("imgLink");
+const imgOpen   = document.getElementById("imgOpen");
+const stationBox  = document.getElementById("stationBox");
+const stationName = document.getElementById("stationName");
 
-// Haversine
+// === Haversine ===
 function haversine(lat1, lon1, lat2, lon2){
   const toRad = d => d * Math.PI / 180;
   const R = 6371000;
@@ -108,7 +126,7 @@ function haversine(lat1, lon1, lat2, lon2){
   return R * c;
 }
 
-// UI-Helfer
+// === UI-Helfer ===
 function setStatusOk(text){
   statusBox.classList.remove("warn");
   statusBox.classList.add("ok");
@@ -122,31 +140,34 @@ function setStatusWarn(text){
   btn.classList.remove("success");
 }
 
-// Bei jeder Standortprüfung: Buchstaben/Code/Bild zurücksetzen
+// === Reset bei neuer Standortprüfung ===
 function lockGate(){
   hintSpan.textContent = "—";
   codeInput.value = "";
   codeMsg.textContent = "";
   codeGate.style.display = "none";
-  if (imgBlock) imgBlock.style.display = "none";
+  imgBlock.style.display = "none";
+  stationBox.style.display = "none";
 }
 
-// Code freischalten (Buchstabe fett + rot)
-function unlockLetter(letter) {
+// === Buchstabe freischalten + Station anzeigen ===
+function unlockLetterAndStation(code, letter){
   hintSpan.innerHTML = `<strong style="color:#c62828;">${letter}</strong>`;
+  const station = CODE_TO_STATION[code] || "Unbekannte Station";
+  stationName.textContent = station;
+  stationBox.style.display = "block";
   codeGate.style.display = "none";
 }
 
-// Standort prüfen
+// === Standort prüfen ===
 btn.addEventListener("click", () => {
   if(!navigator.geolocation){
     setStatusWarn("Geolocation wird nicht unterstützt.");
     return;
   }
-  // Bei jeder neuen Prüfung: erneut Code verlangen & Bild verbergen
   lockGate();
-
   setStatusWarn("Bitte Standortfreigabe erlauben …");
+
   navigator.geolocation.getCurrentPosition(pos => {
     const { latitude, longitude, accuracy } = pos.coords;
     const dist = haversine(latitude, longitude, TARGET_LAT, TARGET_LNG);
@@ -154,15 +175,12 @@ btn.addEventListener("click", () => {
       setStatusOk(`Am richtigen Ort (≈ ${Math.round(dist)} m, Genauigkeit ±${Math.round(accuracy)} m).`);
       content.style.display = "block";
 
-      // Bild sofort einblenden
-      if (IMAGE_URL && imgBlock && imgEl && imgLink && imgOpen) {
-        imgEl.src = IMAGE_URL;
-        imgLink.href = IMAGE_URL;
-        imgOpen.href = IMAGE_URL;
-        imgBlock.style.display = "block";
-      }
+      // Bild anzeigen
+      imgEl.src = IMAGE_URL;
+      imgLink.href = IMAGE_URL;
+      imgOpen.href = IMAGE_URL;
+      imgBlock.style.display = "block";
 
-      // Codefeld anzeigen – Buchstabe bleibt verborgen bis korrekter Code
       codeGate.style.display = "block";
     } else {
       setStatusWarn(`Nicht am richtigen Ort (Entfernung ≈ ${Math.round(dist)} m, Zielradius ${RADIUS_M} m).`);
@@ -173,21 +191,21 @@ btn.addEventListener("click", () => {
   }, { enableHighAccuracy:true, timeout:15000, maximumAge:0 });
 });
 
-// Codeprüfung
+// === Codeprüfung ===
 let tries = 0;
 if (codeBtn) {
   codeBtn.addEventListener("click", () => {
     const val = (codeInput.value || "")
       .toUpperCase()
       .trim()
-      .replace(/[\/\s]/g, ""); // "/" und Leerzeichen entfernen
+      .replace(/[\/\s]/g, "");
 
     if (!val) { codeMsg.textContent = "Bitte Positionscode eingeben."; return; }
 
     const letter = CODE_TO_LETTER[val] || null;
     if (letter) {
       codeMsg.textContent = "Freigeschaltet ✅";
-      unlockLetter(letter);
+      unlockLetterAndStation(val, letter);
     } else {
       tries++;
       codeMsg.textContent = `Falscher Code ❌ (Versuch ${tries}).`;
